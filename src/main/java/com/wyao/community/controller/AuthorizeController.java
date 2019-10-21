@@ -2,6 +2,8 @@ package com.wyao.community.controller;
 
 import com.wyao.community.dto.AccessTokenDTO;
 import com.wyao.community.dto.GithubUserDTO;
+import com.wyao.community.mapper.UserMapper;
+import com.wyao.community.model.UserModel;
 import com.wyao.community.provider.GithubProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,11 +11,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
+
 @Controller
 public class AuthorizeController {
 
     @Autowired
     private GithubProvider githubProvider;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Value("${github.client_id}")
     private String client_id;
@@ -27,7 +35,8 @@ public class AuthorizeController {
     @GetMapping("/callback")
     public String callback(
             @RequestParam(name="code") String code,
-            @RequestParam(name="state") String state
+            @RequestParam(name="state") String state,
+            HttpServletRequest request
     ) {
         AccessTokenDTO accessTokenDTO = new AccessTokenDTO();
 
@@ -39,7 +48,21 @@ public class AuthorizeController {
 
         String accessToken = githubProvider.getAccessToken(accessTokenDTO);
         GithubUserDTO githubUserDTO = githubProvider.getUser(accessToken);
-        System.out.println(githubUserDTO.getLogin());
-        return "index";
+
+        if (githubUserDTO != null) {
+            //登录成功 写cookie和session
+            UserModel userModel = new UserModel();
+            userModel.setToken(UUID.randomUUID().toString());
+            userModel.setName(githubUserDTO.getLogin());
+            userModel.setAccountId(String.valueOf(githubUserDTO.getId()));
+            userModel.setGmtCreate(System.currentTimeMillis());
+            userModel.setGmtModified(userModel.getGmtCreate());
+            userMapper.insert(userModel);
+            request.getSession().setAttribute("githubUserDTO", githubUserDTO);
+            return "redirect:/";
+        } else {
+            // 登录失败
+            return "redirect:/";
+        }
     }
 }
