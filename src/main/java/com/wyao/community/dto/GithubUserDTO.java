@@ -18,8 +18,6 @@ public class GithubUserDTO {
         this.bio = bio;
     }
 
-    private String login;
-
     public String getLogin() {
         return login;
     }
@@ -28,6 +26,13 @@ public class GithubUserDTO {
         this.login = login;
     }
 
+    public GithubUserDTO(String login, Long id, String bio) {
+        this.login = login;
+        this.id = id;
+        this.bio = bio;
+    }
+
+    private String login;
     private Long id;
     private String bio;
 }
